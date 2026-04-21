@@ -71,14 +71,11 @@
   body.high-risk .card{border-color:#2a1010;}
   body.high-risk #status-pill{background:#2a0000;color:#ef4444;border-color:#8b1a1a;}
   .empty-msg{color:#2d4560;font-size:13px;text-align:center;padding:22px 0;}
-  /* AI Reason box */
   #ai-reason-box{background:#05101f;border:1px solid #1a3a5a;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:none;}
   #ai-reason-box .ai-label{font-size:10px;color:#2d6a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700;}
   #ai-reason-text{font-size:13px;color:#7dd3fc;line-height:1.6;}
-  /* API badge */
   .api-badge{display:inline-block;font-size:9px;padding:2px 8px;border-radius:99px;background:#051a2e;color:#1a6a8a;border:1px solid #0a3a5a;margin-left:8px;vertical-align:middle;}
   .feed-ai{font-size:11px;color:#2a6a8a;margin-top:3px;font-style:italic;}
-  /* Connection indicator */
   #conn-status{font-size:11px;margin-top:6px;}
 </style>
 </head>
@@ -92,22 +89,18 @@
     <div id="conn-status"></div>
   </header>
 
-  <!-- AI Reason Box -->
   <div id="ai-reason-box">
     <div class="ai-label">🤖 AI Risk Explanation</div>
     <div id="ai-reason-text"></div>
   </div>
 
-  <!-- Alert banner -->
   <div id="alert-box"></div>
 
-  <!-- Predictive warning bar -->
   <div id="predict-bar">
     <p id="predict-title"></p>
     <span id="predict-sub"></span>
   </div>
 
-  <!-- Decision Engine -->
   <div id="decision-panel">
     <div class="card">
       <h3>🤖 Automated Decision Engine</h3>
@@ -115,7 +108,6 @@
     </div>
   </div>
 
-  <!-- Stats -->
   <div class="grid-3">
     <div class="stat-box"><div class="stat-val" id="s-total">0</div><div class="stat-lbl">Total Events</div></div>
     <div class="stat-box"><div class="stat-val" id="s-sus">0</div><div class="stat-lbl">Suspicious</div></div>
@@ -125,7 +117,6 @@
     <div class="stat-box"><div class="stat-val" id="s-delta" style="color:#f59e0b;">—</div><div class="stat-lbl">Score Delta</div></div>
   </div>
 
-  <!-- Simulate + Score -->
   <div class="grid-2">
     <div class="card">
       <h3>Simulate Activity</h3>
@@ -158,7 +149,6 @@
     </div>
   </div>
 
-  <!-- Feed + Insights -->
   <div class="grid-2">
     <div class="card">
       <h3>Activity Feed</h3>
@@ -173,322 +163,261 @@
 </div>
 
 <script>
-  // ✅ REQUIRED DATA 
+  const API = 'http://localhost:3000';
 
-const locs = ['Delhi','Chennai','Bangalore','Kolkata','Hyderabad','Dubai'];
+  const txnAmts = {
+    txn_high: [45000, 80000, 120000],
+    txn_normal: [500, 1200, 2500]
+  };
 
-const txnAmts = {
-  txn_high: [45000, 80000, 120000],
-  txn_normal: [500, 1200, 2500]
-};
+  function randFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  const locs = ['Delhi','Chennai','Bangalore','Kolkata','Hyderabad','Dubai','London','New York','Singapore'];
+  const inr  = n => '₹' + n.toLocaleString('en-IN');
+  const ts   = () => { const d = new Date(); return d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0') + ':' + String(d.getSeconds()).padStart(2,'0'); };
 
-function randFrom(arr){
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-const API = 'http://localhost:3000';
+  // Local UI state
+  let S = {
+    score: 0, prev: 0,
+    events: [], scoreHistory: [],
+    fails: 0, blockedTxns: 0, suspicious: 0,
+    locations: new Set(['Mumbai']),
+    usualLoc: 'Mumbai',
+    txnHistory: []
+  };
 
-// Local UI state (mirrors server)
-let S = {
-  score: 0, prev: 0,
-  events: [], scoreHistory: [],
-  fails: 0, blockedTxns: 0, suspicious: 0,
-  locations: new Set(['Mumbai']),
-  usualLoc: 'Mumbai',
-  txnHistory: []
-};
-
-const LOCS = ['Delhi','Chennai','Bangalore','Kolkata','Hyderabad','Pune','Dubai','London','New York','Singapore'];
-const HIGH = [45000,85000,120000,200000,75000,150000,95000];
-const NORM = [500,800,1200,2500,1800,950,650];
-const pick = a => a[Math.floor(Math.random()*a.length)];
-const inr  = n => '₹'+n.toLocaleString('en-IN');
-const ts   = () => { const d=new Date(); return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'); };
-
-// Check API connection
-async function checkConnection() {
-  try {
-    await fetch(API + '/risk');
-    document.getElementById('conn-status').innerHTML = '<span style="color:#22c55e;font-size:11px;">● Backend Connected (localhost:3000)</span>';
-  } catch(e) {
-    document.getElementById('conn-status').innerHTML = '<span style="color:#ef4444;font-size:11px;">⚠ Backend offline — running in local mode</span>';
-  }
-}
-checkConnection();
-syncWithBackend();
-async function syncWithBackend() {
-  try {
-    const res = await fetch(API + '/risk');
-    const data = await res.json();
-
-    // ✅ sync score from backend
-    S.score = data.score;
-
-    // ✅ show correct AI reason
-    if (data.aiReason) {
-      showAIReason(data.aiReason);
+  // Check API connection
+  async function checkConnection() {
+    try {
+      await fetch(API + '/risk');
+      document.getElementById('conn-status').innerHTML = '<span style="color:#22c55e;font-size:11px;">● Backend Connected (localhost:3000)</span>';
+    } catch(e) {
+      document.getElementById('conn-status').innerHTML = '<span style="color:#ef4444;font-size:11px;">⚠ Backend offline — running in local mode</span>';
     }
-
-    render();
-  } catch (e) {
-    console.log("Backend not reachable");
-  }
-}
-
-// ── Simulate ───────────────────────────────────────────────────────
-async function sim(type) {
-  async function sim(type) {
-  console.log("Clicked:", type); // debug
-
-  let label = '', dot = 'dot-blue';
-  let isSus = false;
-  let delta = 0;
-  let amount = 0;
-  let location = null;
-
-  if (type === 'login_same') {
-    label = 'Login from ' + S.usualLoc + ' (usual location)';
-    dot = 'dot-green';
-  } 
-  else if (type === 'login_diff') {
-    const loc = randFrom(locs);
-    S.lastLoc = loc;
-    S.locations.add(loc);
-    location = loc;
-
-    label = 'Login from ' + loc + ' (new location)';
-    dot = 'dot-yellow';
-
-    delta = 30;
-    isSus = true;
-  } 
-  else if (type === 'txn_high') {
-    const amt = randFrom(txnAmts.txn_high);
-    S.txnHistory.push(amt);
-    amount = amt;
-
-    label = 'Transaction ₹' + amt + ' — High value';
-    dot = 'dot-red';
-
-    delta = 40;
-    isSus = true;
-  } 
-  else if (type === 'txn_normal') {
-    const amt = randFrom(txnAmts.txn_normal);
-    S.txnHistory.push(amt);
-    amount = amt;
-
-    label = 'Transaction ₹' + amt + ' — within normal range';
-    dot = 'dot-green';
-  } 
-  else if (type === 'fail_login') {
-    S.fails++;
-
-    label = 'Failed login attempt #' + S.fails + ' — invalid credentials';
-    dot = 'dot-red';
-
-    delta = 25;
-    isSus = true;
   }
 
-  // count suspicious
-  if (isSus) S.suspicious++;
-
-  // update score
-  S.prev = S.score;
-  S.score = Math.min(100, S.score + delta);
-
-  // store event
-  S.events.unshift({ label, dot, time: ts(), aiReason: '' });
-  if (S.events.length > 6) S.events.pop();
-
-  render();
-
-  // backend call (optional)
-  try {
-    const res = await fetch(API + '/event', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ type, label, delta, isSus, amount, location })
-    });
-
-    const data = await res.json();
-
-    if (data.score !== undefined) {
+  async function syncWithBackend() {
+    try {
+      const res = await fetch(API + '/risk');
+      const data = await res.json();
       S.score = data.score;
+      if (data.aiReason) showAIReason(data.aiReason);
+      render();
+    } catch(e) {
+      console.log('Backend not reachable');
+    }
+  }
+
+  checkConnection();
+  syncWithBackend();
+
+  // ── Simulate ────────────────────────────────────────────────────
+  async function sim(type) {
+    let label = '', dot = 'dot-blue';
+    let isSus = false;
+    let delta = 0;
+    let amount = 0;
+    let location = null;
+
+    if (type === 'login_same') {
+      label = 'Login from ' + S.usualLoc + ' (usual location)';
+      dot = 'dot-green';
+    }
+    else if (type === 'login_diff') {
+      const loc = randFrom(locs);
+      S.locations.add(loc);
+      location = loc;
+      label = 'Login from ' + loc + ' (new location)';
+      dot = 'dot-yellow';
+      delta = 30;
+      isSus = true;
+    }
+    else if (type === 'txn_high') {
+      const amt = randFrom(txnAmts.txn_high);
+      S.txnHistory.push(amt);
+      amount = amt;
+      label = 'Transaction ' + inr(amt) + ' — High value';
+      dot = 'dot-red';
+      delta = 40;
+      isSus = true;
+    }
+    else if (type === 'txn_normal') {
+      const amt = randFrom(txnAmts.txn_normal);
+      S.txnHistory.push(amt);
+      amount = amt;
+      label = 'Transaction ' + inr(amt) + ' — within normal range';
+      dot = 'dot-green';
+    }
+    else if (type === 'fail_login') {
+      S.fails++;
+      label = 'Failed login attempt #' + S.fails + ' — invalid credentials';
+      dot = 'dot-red';
+      delta = 25;
+      isSus = true;
     }
 
-    if (data.aiReason) {
-      showAIReason(data.aiReason);
-    }
+    if (isSus) S.suspicious++;
+
+    S.prev = S.score;
+    S.score = Math.min(100, S.score + delta);
+    S.scoreHistory.push(S.score);
+
+    S.events.unshift({ label, dot, time: ts(), aiReason: '' });
+    if (S.events.length > 6) S.events.pop();
 
     render();
-  } catch (e) {
-    console.log("Backend not reachable");
+
+    // POST to backend, then sync authoritative state
+    try {
+      const res = await fetch(API + '/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, label, delta, isSus, amount, location })
+      });
+      const data = await res.json();
+
+      if (data.score !== undefined) S.score = data.score;
+      if (data.aiReason) {
+        S.events[0].aiReason = data.aiReason;
+        showAIReason(data.aiReason);
+      }
+      render();
+    } catch(e) {
+      console.log('Backend not reachable — running locally');
+    }
   }
-}
-  // ── POST to backend & get AI reason ──────────────────────────
-  try {
-    const res = await fetch(API + '/event', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ type, label, delta, isSus, amount, location })
-    });
-    await res.json();
 
-// 🔥 Get real state from backend
-const riskRes = await fetch(API + '/risk');
-const riskData = await riskRes.json();
-
-// ✅ Backend controls everything now
-S.score = riskData.score;
-
-// Show AI reason based on current state
-if (riskData.aiReason) {
-  S.events[0].aiReason = riskData.aiReason;
-  showAIReason(riskData.aiReason);
-}
-
-rFeed();
-render();
-  } catch(e) {
-    // Backend offline — UI still works
+  function showAIReason(reason) {
+    const box = document.getElementById('ai-reason-box');
+    const txt = document.getElementById('ai-reason-text');
+    txt.textContent = reason;
+    box.style.display = 'block';
   }
-}
 
-function showAIReason(reason) {
-  const box = document.getElementById('ai-reason-box');
-  const txt = document.getElementById('ai-reason-text');
-  txt.textContent = reason;
-  box.style.display = 'block';
-  box.style.animation = 'none';
-  setTimeout(() => box.style.animation = '', 10);
-}
+  // ── Render all ──────────────────────────────────────────────────
+  function render() { rFeed(); rScore(); rTrend(); rInsights(); rDecision(); rAlert(); rPredict(); rStats(); rBody(); }
 
-// ── Render all ─────────────────────────────────────────────────────
-function render(){ rFeed(); rScore(); rTrend(); rInsights(); rDecision(); rAlert(); rPredict(); rStats(); rBody(); }
-
-function rFeed(){
-  const el = document.getElementById('feed');
-  if(!S.events.length){ el.innerHTML='<div class="empty-msg">No activity yet.</div>'; return; }
-  el.innerHTML = S.events.map(e=>`
-    <div class="feed-item">
-      <span class="dot ${e.dot}"></span>
-      <div style="flex:1">
-        <div>${e.label}</div>
-        ${e.aiReason ? `<div class="feed-ai">🤖 ${e.aiReason}</div>` : ''}
-      </div>
-      <span class="feed-time">${e.time}</span>
-    </div>`).join('');
-}
-
-function rScore(){
-  const s=S.score;
-  let color='#22c55e', bc='badge-low', lbl='LOW RISK';
-  if(s>70)     {color='#ef4444';bc='badge-high';lbl='HIGH RISK';}
-  else if(s>30){color='#f59e0b';bc='badge-med'; lbl='MEDIUM RISK';}
-  document.getElementById('score-num').textContent=s;
-  document.getElementById('score-num').style.color=color;
-  document.getElementById('score-label').innerHTML=`<span class="badge ${bc}">${lbl}</span>`;
-  document.getElementById('score-bar').style.cssText=`width:${s}%;background:${color};`;
-  const diff = S.score - S.prev;
-  const de = document.getElementById('s-delta');
-  de.textContent = diff>0?'+'+diff:(diff===0?'0':diff);
-  de.style.color  = diff>0?'#ef4444':(diff<0?'#22c55e':'#f59e0b');
-}
-
-function rTrend(){
-  const box = document.getElementById('trend-box');
-  const h   = S.scoreHistory;
-  if(h.length < 2){ box.style.display='none'; return; }
-  box.style.display='flex';
-  const diff = h[h.length-1] - h[Math.max(0,h.length-3)];
-  if(diff > 5){
-    box.className='trend-up';
-    document.getElementById('trend-icon').textContent='↑';
-    document.getElementById('trend-text').textContent='Risk Increasing';
-  } else if(diff < -5){
-    box.className='trend-down';
-    document.getElementById('trend-icon').textContent='↓';
-    document.getElementById('trend-text').textContent='Risk Decreasing';
-  } else {
-    box.className='trend-flat';
-    document.getElementById('trend-icon').textContent='→';
-    document.getElementById('trend-text').textContent='Risk Stable';
+  function rFeed() {
+    const el = document.getElementById('feed');
+    if (!S.events.length) { el.innerHTML = '<div class="empty-msg">No activity yet.</div>'; return; }
+    el.innerHTML = S.events.map(e => `
+      <div class="feed-item">
+        <span class="dot ${e.dot}"></span>
+        <div style="flex:1">
+          <div>${e.label}</div>
+          ${e.aiReason ? `<div class="feed-ai">🤖 ${e.aiReason}</div>` : ''}
+        </div>
+        <span class="feed-time">${e.time}</span>
+      </div>`).join('');
   }
-}
 
-function rInsights(){
-  const el=document.getElementById('insights'), ins=[], s=S.score;
-  if(S.fails>=1)
-    ins.push({cls:S.fails>=3?'danger':'warn',
-      msg:`${S.fails} failed login attempt${S.fails>1?'s':''} detected. ${S.fails>=3?'High probability of brute-force attack.':'Monitoring for further attempts.'}`});
-  if(S.locations.size>1){
-    const x=[...S.locations].filter(l=>l!==S.usualLoc);
-    ins.push({cls:'warn', msg:`Login from unusual location(s): ${x.join(', ')}. Usual location: ${S.usualLoc}. Geo-mismatch flagged.`});
+  function rScore() {
+    const s = S.score;
+    let color = '#22c55e', bc = 'badge-low', lbl = 'LOW RISK';
+    if (s > 70)      { color = '#ef4444'; bc = 'badge-high'; lbl = 'HIGH RISK'; }
+    else if (s > 30) { color = '#f59e0b'; bc = 'badge-med';  lbl = 'MEDIUM RISK'; }
+    document.getElementById('score-num').textContent = s;
+    document.getElementById('score-num').style.color = color;
+    document.getElementById('score-label').innerHTML = `<span class="badge ${bc}">${lbl}</span>`;
+    document.getElementById('score-bar').style.cssText = `width:${s}%;background:${color};`;
+    const diff = S.score - S.prev;
+    const de = document.getElementById('s-delta');
+    de.textContent = diff > 0 ? '+' + diff : (diff === 0 ? '0' : diff);
+    de.style.color  = diff > 0 ? '#ef4444' : (diff < 0 ? '#22c55e' : '#f59e0b');
   }
-  if(S.txnHistory.filter(x=>x>10000).length){
-    const avg=Math.round(S.txnHistory.reduce((a,b)=>a+b,0)/S.txnHistory.length);
-    ins.push({cls:'danger', msg:`High-value transaction detected. Session average: ${inr(avg)}. Pattern deviates from user baseline.`});
+
+  function rTrend() {
+    const box = document.getElementById('trend-box');
+    const h   = S.scoreHistory;
+    if (h.length < 2) { box.style.display = 'none'; return; }
+    box.style.display = 'flex';
+    const diff = h[h.length - 1] - h[Math.max(0, h.length - 3)];
+    if (diff > 5) {
+      box.className = 'trend-up';
+      document.getElementById('trend-icon').textContent = '↑';
+      document.getElementById('trend-text').textContent = 'Risk Increasing';
+    } else if (diff < -5) {
+      box.className = 'trend-down';
+      document.getElementById('trend-icon').textContent = '↓';
+      document.getElementById('trend-text').textContent = 'Risk Decreasing';
+    } else {
+      box.className = 'trend-flat';
+      document.getElementById('trend-icon').textContent = '→';
+      document.getElementById('trend-text').textContent = 'Risk Stable';
+    }
   }
-  if(S.suspicious>=3)
-    ins.push({cls:'danger', msg:'Multiple suspicious events in session. Escalation multiplier active (+50%). Account under enhanced monitoring.'});
-  if(s>=50 && s<=70)
-    ins.push({cls:'predict', msg:'🔮 Risk trajectory increasing. One more suspicious event may trigger automated account restriction.'});
-  if(s>70)
-    ins.push({cls:'predict', msg:'🔮 Account in HIGH RISK zone. Automated decisions now enforced. Recommend immediate human review.'});
-  if(!ins.length && s===0){ el.innerHTML='<div class="empty-msg">Waiting for activity data...</div>'; return; }
-  if(!ins.length) ins.push({cls:'', msg:'All activity within normal parameters. No anomalies detected.'});
-  el.innerHTML=ins.map(i=>`<div class="insight-item ${i.cls}">${i.msg}</div>`).join('');
-}
 
-function rDecision(){
-  const panel=document.getElementById('decision-panel');
-  if(S.score<=70){ panel.style.display='none'; return; }
-  panel.style.display='block';
-  document.getElementById('d-actions').innerHTML=`
-    <div class="d-action d-block">⛔ Transaction Blocked</div>
-    <div class="d-action d-otp">🔐 OTP Verification Required</div>
-    <div class="d-action d-flag">🚩 Account Flagged for Review</div>`;
-}
+  function rInsights() {
+    const el = document.getElementById('insights'), ins = [], s = S.score;
+    if (S.fails >= 1)
+      ins.push({ cls: S.fails >= 3 ? 'danger' : 'warn',
+        msg: `${S.fails} failed login attempt${S.fails > 1 ? 's' : ''} detected. ${S.fails >= 3 ? 'High probability of brute-force attack.' : 'Monitoring for further attempts.'}` });
+    if (S.locations.size > 1) {
+      const x = [...S.locations].filter(l => l !== S.usualLoc);
+      ins.push({ cls: 'warn', msg: `Login from unusual location(s): ${x.join(', ')}. Usual location: ${S.usualLoc}. Geo-mismatch flagged.` });
+    }
+    if (S.txnHistory.filter(x => x > 10000).length) {
+      const avg = Math.round(S.txnHistory.reduce((a, b) => a + b, 0) / S.txnHistory.length);
+      ins.push({ cls: 'danger', msg: `High-value transaction detected. Session average: ${inr(avg)}. Pattern deviates from user baseline.` });
+    }
+    if (S.suspicious >= 3)
+      ins.push({ cls: 'danger', msg: 'Multiple suspicious events in session. Escalation multiplier active (+50%). Account under enhanced monitoring.' });
+    if (s >= 50 && s <= 70)
+      ins.push({ cls: 'predict', msg: '🔮 Risk trajectory increasing. One more suspicious event may trigger automated account restriction.' });
+    if (s > 70)
+      ins.push({ cls: 'predict', msg: '🔮 Account in HIGH RISK zone. Automated decisions now enforced. Recommend immediate human review.' });
+    if (!ins.length && s === 0) { el.innerHTML = '<div class="empty-msg">Waiting for activity data...</div>'; return; }
+    if (!ins.length) ins.push({ cls: '', msg: 'All activity within normal parameters. No anomalies detected.' });
+    el.innerHTML = ins.map(i => `<div class="insight-item ${i.cls}">${i.msg}</div>`).join('');
+  }
 
-function rAlert(){
-  const box=document.getElementById('alert-box');
-  if(S.score>70){ box.className='alert-high'; box.style.display='block'; box.innerHTML='⚠&nbsp; HIGH RISK DETECTED — Automated restrictions are now active on this account.'; }
-  else if(S.score>30){ box.className='alert-med'; box.style.display='block'; box.innerHTML='⚡&nbsp; MEDIUM RISK — Unusual patterns observed. System monitoring escalated.'; }
-  else { box.style.display='none'; }
-}
+  function rDecision() {
+    const panel = document.getElementById('decision-panel');
+    if (S.score <= 70) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    document.getElementById('d-actions').innerHTML = `
+      <div class="d-action d-block">⛔ Transaction Blocked</div>
+      <div class="d-action d-otp">🔐 OTP Verification Required</div>
+      <div class="d-action d-flag">🚩 Account Flagged for Review</div>`;
+  }
 
-function rPredict(){
-  const bar=document.getElementById('predict-bar'),t=document.getElementById('predict-title'),s=document.getElementById('predict-sub');
-  if(S.score<30){ bar.style.display='none'; return; }
-  bar.style.display='block';
-  if(S.score>70){ t.textContent='🤖 Decision Engine Active'; s.textContent='Transactions auto-blocked. OTP required. Account flagged for compliance review.'; }
-  else if(S.score>50){ t.textContent='⚡ Risk Escalation Warning'; s.textContent='One more suspicious event will cross the HIGH RISK threshold and trigger automated lockdown.'; }
-  else { t.textContent='📈 Risk Trajectory Detected'; s.textContent='Unusual patterns emerging. System tracking behaviour for anomaly confirmation.'; }
-}
+  function rAlert() {
+    const box = document.getElementById('alert-box');
+    if (S.score > 70) { box.className = 'alert-high'; box.style.display = 'block'; box.innerHTML = '⚠&nbsp; HIGH RISK DETECTED — Automated restrictions are now active on this account.'; }
+    else if (S.score > 30) { box.className = 'alert-med'; box.style.display = 'block'; box.innerHTML = '⚡&nbsp; MEDIUM RISK — Unusual patterns observed. System monitoring escalated.'; }
+    else { box.style.display = 'none'; }
+  }
 
-function rStats(){
-  document.getElementById('s-total').textContent  =S.events.length;
-  document.getElementById('s-sus').textContent    =S.suspicious;
-  document.getElementById('s-loc').textContent    =S.locations.size;
-  document.getElementById('s-fails').textContent  =S.fails;
-  document.getElementById('s-blocked').textContent=S.blockedTxns;
-}
+  function rPredict() {
+    const bar = document.getElementById('predict-bar'), t = document.getElementById('predict-title'), s = document.getElementById('predict-sub');
+    if (S.score < 30) { bar.style.display = 'none'; return; }
+    bar.style.display = 'block';
+    if (S.score > 70)      { t.textContent = '🤖 Decision Engine Active'; s.textContent = 'Transactions auto-blocked. OTP required. Account flagged for compliance review.'; }
+    else if (S.score > 50) { t.textContent = '⚡ Risk Escalation Warning'; s.textContent = 'One more suspicious event will cross the HIGH RISK threshold and trigger automated lockdown.'; }
+    else                   { t.textContent = '📈 Risk Trajectory Detected'; s.textContent = 'Unusual patterns emerging. System tracking behaviour for anomaly confirmation.'; }
+  }
 
-function rBody(){
-  document.body.classList.toggle('high-risk', S.score>70);
-  document.getElementById('status-pill').textContent =
-    S.score>70 ? '⚠ HIGH RISK MODE' : S.score>30 ? '⚡ ELEVATED MONITORING' : '● SYSTEM ACTIVE';
-}
+  function rStats() {
+    document.getElementById('s-total').textContent   = S.events.length;
+    document.getElementById('s-sus').textContent     = S.suspicious;
+    document.getElementById('s-loc').textContent     = S.locations.size;
+    document.getElementById('s-fails').textContent   = S.fails;
+    document.getElementById('s-blocked').textContent = S.blockedTxns;
+  }
 
-async function resetAll(){
-  S={score:0,prev:0,events:[],scoreHistory:[],fails:0,blockedTxns:0,suspicious:0,
-     locations:new Set(['Mumbai']),usualLoc:'Mumbai',txnHistory:[]};
-  document.getElementById('ai-reason-box').style.display='none';
-  ['trend-box','decision-panel','predict-bar'].forEach(id=>document.getElementById(id).style.display='none');
-  render();
-  try { await fetch(API+'/reset', {method:'POST'}); } catch(e){}
-}
+  function rBody() {
+    document.body.classList.toggle('high-risk', S.score > 70);
+    document.getElementById('status-pill').textContent =
+      S.score > 70 ? '⚠ HIGH RISK MODE' : S.score > 30 ? '⚡ ELEVATED MONITORING' : '● SYSTEM ACTIVE';
+  }
+
+  async function resetAll() {
+    S = { score: 0, prev: 0, events: [], scoreHistory: [], fails: 0, blockedTxns: 0, suspicious: 0,
+          locations: new Set(['Mumbai']), usualLoc: 'Mumbai', txnHistory: [] };
+    document.getElementById('ai-reason-box').style.display = 'none';
+    ['trend-box','decision-panel','predict-bar'].forEach(id => document.getElementById(id).style.display = 'none');
+    render();
+    try { await fetch(API + '/reset', { method: 'POST' }); } catch(e) {}
+  }
 </script>
 </body>
 </html>

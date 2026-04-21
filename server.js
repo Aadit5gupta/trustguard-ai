@@ -27,13 +27,13 @@ function getAIExplanation(type, state) {
     : 0;
 
   const rules = [
-    { condition: fails >= 3,          reason: `🔴 Brute-force pattern: ${fails} failed logins suggest credential stuffing attack.` },
+    { condition: fails >= 3,           reason: `🔴 Brute-force pattern: ${fails} failed logins suggest credential stuffing attack.` },
     { condition: locations.length > 2, reason: `🌍 Geo-anomaly: Account accessed from ${locations.length} different locations in one session.` },
     { condition: type === 'txn_high' && score > 50, reason: `💸 High-value transaction (avg ₹${avgTxn.toLocaleString('en-IN')}) during elevated risk session triggers fraud flag.` },
-    { condition: suspicious >= 3,     reason: `⚡ Escalation active: ${suspicious} suspicious events detected — risk multiplier applied.` },
-    { condition: type === 'login_diff', reason: `📍 New location login detected. Geo-mismatch with established baseline (${state.locations[0]}).` },
+    { condition: suspicious >= 3,      reason: `⚡ Escalation active: ${suspicious} suspicious events detected — risk multiplier applied.` },
+    { condition: type === 'login_diff', reason: `📍 New location login detected. Geo-mismatch with established baseline (${locations[0]}).` },
     { condition: type === 'fail_login', reason: `🚫 Failed authentication attempt #${fails}. May indicate account takeover attempt.` },
-    { condition: score > 70,           reason: `🤖 Automated lockdown threshold crossed. Transaction blocking & OTP enforcement now active.` },
+    { condition: score > 70,            reason: `🤖 Automated lockdown threshold crossed. Transaction blocking & OTP enforcement now active.` },
     { condition: score > 40 && score <= 70, reason: `📈 Risk trajectory rising. Behavioral deviation from baseline detected across multiple signals.` },
   ];
 
@@ -55,7 +55,7 @@ app.post('/event', (req, res) => {
   if (isSus && state.suspicious >= 3) effectiveDelta = Math.round(delta * 1.5);
 
   state.score = Math.min(100, state.score + effectiveDelta);
-  console.log("Score:", state.score, "Delta:", delta);
+  console.log('Score:', state.score, 'Delta:', effectiveDelta);
   state.scoreHistory.push(state.score);
   if (state.scoreHistory.length > 10) state.scoreHistory.shift();
 
@@ -81,12 +81,11 @@ app.post('/event', (req, res) => {
 
 // ── GET /risk ─────────────────────────────────────────────────────
 app.get('/risk', (req, res) => {
-  let status = "LOW";
-  if (state.score > 70) status = "HIGH";
-  else if (state.score > 30) status = "MEDIUM";
+  let status = 'LOW';
+  if (state.score > 70) status = 'HIGH';
+  else if (state.score > 30) status = 'MEDIUM';
 
-  // 🔥 THIS IS THE KEY FIX
-  const aiReason = getAIExplanation("state_check", state);
+  const aiReason = getAIExplanation('state_check', state);
 
   res.json({
     score: state.score,
@@ -97,7 +96,7 @@ app.get('/risk', (req, res) => {
     scoreHistory: state.scoreHistory,
     totalEvents: state.events.length,
     riskLevel: status,
-    aiReason // ✅ NEW
+    aiReason
   });
 });
 
@@ -108,7 +107,7 @@ app.get('/logs', (req, res) => {
 
 // ── POST /reset ───────────────────────────────────────────────────
 app.post('/reset', (req, res) => {
-  state = { score:0, events:[], fails:0, suspicious:0, blockedTxns:0, locations:['Mumbai'], txnHistory:[], scoreHistory:[] };
+  state = { score: 0, events: [], fails: 0, suspicious: 0, blockedTxns: 0, locations: ['Mumbai'], txnHistory: [], scoreHistory: [] };
   res.json({ success: true });
 });
 
