@@ -173,6 +173,18 @@
 </div>
 
 <script>
+  // ✅ REQUIRED DATA 
+
+const locs = ['Delhi','Chennai','Bangalore','Kolkata','Hyderabad','Dubai'];
+
+const txnAmts = {
+  txn_high: [45000, 80000, 120000],
+  txn_normal: [500, 1200, 2500]
+};
+
+function randFrom(arr){
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 const API = 'http://localhost:3000';
 
 // Local UI state (mirrors server)
@@ -224,6 +236,9 @@ async function syncWithBackend() {
 
 // ── Simulate ───────────────────────────────────────────────────────
 async function sim(type) {
+  async function sim(type) {
+  console.log("Clicked:", type); // debug
+
   let label = '', dot = 'dot-blue';
   let isSus = false;
   let delta = 0;
@@ -278,7 +293,7 @@ async function sim(type) {
   // count suspicious
   if (isSus) S.suspicious++;
 
-  // update score locally
+  // update score
   S.prev = S.score;
   S.score = Math.min(100, S.score + delta);
 
@@ -288,6 +303,29 @@ async function sim(type) {
 
   render();
 
+  // backend call (optional)
+  try {
+    const res = await fetch(API + '/event', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ type, label, delta, isSus, amount, location })
+    });
+
+    const data = await res.json();
+
+    if (data.score !== undefined) {
+      S.score = data.score;
+    }
+
+    if (data.aiReason) {
+      showAIReason(data.aiReason);
+    }
+
+    render();
+  } catch (e) {
+    console.log("Backend not reachable");
+  }
+}
   // ── POST to backend & get AI reason ──────────────────────────
   try {
     const res = await fetch(API + '/event', {
