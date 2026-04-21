@@ -55,6 +55,7 @@ app.post('/event', (req, res) => {
   if (isSus && state.suspicious >= 3) effectiveDelta = Math.round(delta * 1.5);
 
   state.score = Math.min(100, state.score + effectiveDelta);
+  console.log("Score:", state.score, "Delta:", delta);
   state.scoreHistory.push(state.score);
   if (state.scoreHistory.length > 10) state.scoreHistory.shift();
 

@@ -224,49 +224,67 @@ async function syncWithBackend() {
 
 // ── Simulate ───────────────────────────────────────────────────────
 async function sim(type) {
-  let label='', dot='dot-blue', isSus=false, delta=0, amount=0, location=null;
+  let label = '', dot = 'dot-blue';
+  let isSus = false;
+  let delta = 0;
+  let amount = 0;
+  let location = null;
 
-  if(type === 'login_same'){
-    label = 'Login from '+S.usualLoc+' (usual location)';
+  if (type === 'login_same') {
+    label = 'Login from ' + S.usualLoc + ' (usual location)';
     dot = 'dot-green';
+  } 
+  else if (type === 'login_diff') {
+    const loc = randFrom(locs);
+    S.lastLoc = loc;
+    S.locations.add(loc);
+    location = loc;
 
-  } else if(type === 'login_diff'){
-    location = pick(LOCS);
-    S.locations.add(location);
-    label = 'Login from '+location+' — new location detected';
-    dot='dot-yellow'; delta=30; isSus=true;
+    label = 'Login from ' + loc + ' (new location)';
+    dot = 'dot-yellow';
 
-  } else if(type === 'txn_high'){
-    amount = pick(HIGH);
-    S.txnHistory.push(amount);
-    if(S.score >= 70){
-      S.blockedTxns++;
-      label = 'Transaction '+inr(amount)+' — ⛔ AUTO-BLOCKED by system';
-      dot='dot-red'; delta=5; isSus=true;
-    } else {
-      label = 'Transaction '+inr(amount)+' — high value flagged';
-      dot='dot-red'; delta=40; isSus=true;
-    }
+    delta = 30;
+    isSus = true;
+  } 
+  else if (type === 'txn_high') {
+    const amt = randFrom(txnAmts.txn_high);
+    S.txnHistory.push(amt);
+    amount = amt;
 
-  } else if(type === 'txn_normal'){
-    amount = pick(NORM);
-    S.txnHistory.push(amount);
-    label = 'Transaction '+inr(amount)+' — within normal range';
-    dot='dot-green';
+    label = 'Transaction ₹' + amt + ' — High value';
+    dot = 'dot-red';
 
-  } else if(type === 'fail_login'){
+    delta = 40;
+    isSus = true;
+  } 
+  else if (type === 'txn_normal') {
+    const amt = randFrom(txnAmts.txn_normal);
+    S.txnHistory.push(amt);
+    amount = amt;
+
+    label = 'Transaction ₹' + amt + ' — within normal range';
+    dot = 'dot-green';
+  } 
+  else if (type === 'fail_login') {
     S.fails++;
-    label = 'Failed login attempt #'+S.fails+' — invalid credentials';
-    dot='dot-red'; delta=20; isSus=true;
+
+    label = 'Failed login attempt #' + S.fails + ' — invalid credentials';
+    dot = 'dot-red';
+
+    delta = 25;
+    isSus = true;
   }
 
-  
+  // count suspicious
+  if (isSus) S.suspicious++;
 
-  S.prev  = S.score;
-  
+  // update score locally
+  S.prev = S.score;
+  S.score = Math.min(100, S.score + delta);
 
-  S.events.unshift({label, dot, time: ts(), aiReason: ''});
-  if(S.events.length > 6) S.events.pop();
+  // store event
+  S.events.unshift({ label, dot, time: ts(), aiReason: '' });
+  if (S.events.length > 6) S.events.pop();
 
   render();
 
