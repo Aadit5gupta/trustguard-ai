@@ -1,22 +1,22 @@
-# 🛡️ TrustGuard AI
+# TrustGuard AI
 
 **Real-Time Fraud Detection & Risk Intelligence System with Explainable AI**
 
 ---
 
-## 🚀 Live Demo
-👉 https://trustguard-ai-0wmr.onrender.com
+## Live Demo
+https://trustguard-ai-0wmr.onrender.com
 
 ---
 
-## 📌 Overview
+## Overview
 
 TrustGuard AI is a full-stack system that simulates real-world fraud detection used in fintech platforms.  
 It analyzes user behavior in real time, assigns dynamic risk scores, and triggers automated security actions with clear AI-driven explanations.
 
 ---
 
-## ⚙️ Features
+## Features
 
 - 🔢 **Real-Time Risk Scoring** (0–100 based on user behavior)
 - 🤖 **Explainable AI Engine** for transparent decision-making
@@ -27,7 +27,7 @@ It analyzes user behavior in real time, assigns dynamic risk scores, and trigger
 
 ---
 
-## 🧠 How It Works
+## How It Works
 
 1. User actions (login, transaction, etc.) are sent to backend APIs  
 2. Backend processes events and updates risk score  
@@ -37,20 +37,20 @@ It analyzes user behavior in real time, assigns dynamic risk scores, and trigger
 
 ---
 
-## 📸 System Behavior
+## System Behavior
 
-### 🟢 Normal State
+### Normal State
 ![Normal](./assets/Screenshot%201.png)
 
-### 🟡 Medium Risk Escalation
+### Medium Risk Escalation
 ![Medium](./assets/Screenshot%202.png)
 
-### 🔴 High Risk & Automated Action
+### High Risk & Automated Action
 ![High Risk](./assets/Screenshot%203.png)
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend:** HTML, CSS, JavaScript  
 - **Backend:** Node.js, Express.js  
@@ -59,7 +59,7 @@ It analyzes user behavior in real time, assigns dynamic risk scores, and trigger
 
 ---
 
-## 📦 API Endpoints
+## API Endpoints
 
 | Method | Endpoint   | Description |
 |--------|------------|------------|
@@ -70,7 +70,7 @@ It analyzes user behavior in real time, assigns dynamic risk scores, and trigger
 
 ---
 
-## ▶️ Run Locally
+## Run Locally
 
 ```bash
 git clone https://github.com/Aadit5gupta/trustguard-ai.git
