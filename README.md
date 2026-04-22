@@ -18,12 +18,12 @@ It analyzes user behavior in real time, assigns dynamic risk scores, and trigger
 
 ## Features
 
-- 🔢 **Real-Time Risk Scoring** (0–100 based on user behavior)
-- 🤖 **Explainable AI Engine** for transparent decision-making
-- 🚨 **Automated Actions** (OTP enforcement, transaction blocking)
-- 📊 **Live Activity Feed** with anomaly tracking
-- 🌐 **Full-Stack Architecture** with REST APIs
-- 🔄 **State Synchronization** across reloads
+- **Real-Time Risk Scoring** (0–100 based on user behavior)
+- **Explainable AI Engine** for transparent decision-making
+- **Automated Actions** (OTP enforcement, transaction blocking)
+- **Live Activity Feed** with anomaly tracking
+- **Full-Stack Architecture** with REST APIs
+- **State Synchronization** across reloads
 
 ---
 
